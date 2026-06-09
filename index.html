@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D9E75">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Meny">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Menová kalkulačka</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #1D9E75;
+    --green-light: #E1F5EE;
+    --green-dark: #085041;
+    --bg: #f5f5f3;
+    --card: #ffffff;
+    --text: #1a1a18;
+    --muted: #6b6b67;
+    --border: rgba(0,0,0,0.1);
+    --radius: 14px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141412;
+      --card: #1f1f1d;
+      --text: #f0ede8;
+      --muted: #9a9a94;
+      --border: rgba(255,255,255,0.08);
+      --green-light: #0a3326;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    padding-top: calc(var(--safe-top) + 0px);
+    padding-bottom: calc(var(--safe-bot) + 16px);
+  }
+
+  header {
+    background: var(--green);
+    color: #fff;
+    padding: calc(var(--safe-top) + 18px) 20px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header .icon { font-size: 26px; }
+  header h1 { font-size: 20px; font-weight: 600; }
+  header .sub { font-size: 12px; opacity: 0.8; margin-top: 1px; }
+
+  .main { padding: 16px; max-width: 480px; margin: 0 auto; }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+
+  .card-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+
+  .input-group {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .amount-input {
+    flex: 1;
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    outline: none;
+    min-width: 0;
+    -moz-appearance: textfield;
+  }
+  .amount-input::-webkit-outer-spin-button,
+  .amount-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .amount-input:focus { border-color: var(--green); }
+
+  .cur-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 14px;
+    cursor: pointer;
+    min-width: 90px;
+    gap: 2px;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .cur-btn:active { background: var(--green-light); border-color: var(--green); }
+  .cur-btn .flag { font-size: 22px; line-height: 1; }
+  .cur-btn .code { font-size: 15px; font-weight: 600; color: var(--text); }
+  .cur-btn .name { font-size: 10px; color: var(--muted); }
+
+  .swap-row {
+    display: flex;
+    justify-content: center;
+    margin: -4px 0;
+    position: relative;
+    z-index: 1;
+  }
+  .swap-btn {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+  }
+  .swap-btn:active { background: var(--green-light); }
+
+  .result-card {
+    background: var(--green-light);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    margin-bottom: 14px;
+    border: 1px solid rgba(29,158,117,0.2);
+  }
+  .result-eq { font-size: 13px; color: var(--green-dark); margin-bottom: 4px; }
+  @media (prefers-color-scheme: dark) { .result-eq { color: #5DCAA5; } }
+  .result-amount { font-size: 36px; font-weight: 600; color: var(--green-dark); line-height: 1.1; }
+  @media (prefers-color-scheme: dark) { .result-amount { color: #9FE1CB; } }
+  .result-rate { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+
+  .quick-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .quick-tile {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color 0.15s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .quick-tile:active { border-color: var(--green); background: var(--green-light); }
+  .quick-tile .pair { font-size: 12px; color: var(--muted); }
+  .quick-tile .val { font-size: 15px; font-weight: 600; color: var(--text); }
+
+  .status-bar {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 4px 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; flex-shrink: 0; }
+  .dot.err { background: #E24B4A; }
+
+  /* Currency picker modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-sheet {
+    background: var(--card);
+    border-radius: 20px 20px 0 0;
+    padding: 0 0 calc(var(--safe-bot) + 16px);
+    width: 100%;
+    max-width: 480px;
+    max-height: 80dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 8px; }
+  .modal-header { padding: 8px 16px 12px; font-size: 16px; font-weight: 600; }
+  .modal-search {
+    margin: 0 16px 10px;
+    font-size: 15px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    width: calc(100% - 32px);
+  }
+  .modal-search:focus { border-color: var(--green); }
+  .modal-list { overflow-y: auto; flex: 1; }
+  .modal-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-item:active { background: var(--green-light); }
+  .modal-item .mflag { font-size: 24px; width: 30px; text-align: center; }
+  .modal-item .mcode { font-size: 15px; font-weight: 600; flex: 0 0 48px; }
+  .modal-item .mname { font-size: 13px; color: var(--muted); }
+  .modal-item.selected { background: var(--green-light); }
+  .modal-item.selected .mcode { color: var(--green); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="icon">💱</div>
+  <div>
+    <h1>Menová kalkulačka</h1>
+    <div class="sub">Aktuálne kurzy ECB</div>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Od -->
+  <div class="card">
+    <div class="card-label">Prepočítať</div>
+    <div class="input-group">
+      <input class="amount-input" type="number" id="amountIn" value="100" inputmode="decimal" min="0">
+      <button class="cur-btn" id="fromBtn" onclick="openModal('from')">
+        <span class="flag" id="fromFlag">🇪🇺</span>
+        <span class="code" id="fromCode">EUR</span>
+        <span class="name" id="fromName">Euro</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="swap-row">
+    <button class="swap-btn" id="swapBtn" aria-label="Prehodiť meny">⇅</button>
+  </div>
+
+  <!-- Na -->
+  <div class="card">
+    <div class="card-label">Na</div>
+    <div class="input-group">
+      <button class="cur-btn" id="toBtn" onclick="openModal('to')" style="min-width:90px">
+        <span class="flag" id="toFlag">🇺🇸</span>
+        <span class="code" id="toCode">USD</span>
+        <span class="name" id="toName">Americký dolár</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Výsledok -->
+  <div class="result-card">
+    <div class="result-eq" id="resultEq">100 EUR =</div>
+    <div class="result-amount" id="resultAmount">—</div>
+    <div class="result-rate" id="resultRate"></div>
+  </div>
+
+  <!-- Rýchle meny -->
+  <div class="section-title">Rýchle porovnanie (základ 100 EUR)</div>
+  <div class="quick-grid" id="quickGrid"></div>
+
+  <div class="status-bar">
+    <span class="dot" id="statusDot"></span>
+    <span id="statusMsg">Načítavam kurzy…</span>
+  </div>
+
+</div>
+
+<!-- Modal výber meny -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal-sheet" onclick="e=>e.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header" id="modalTitle">Vyber menu</div>
+    <input class="modal-search" id="modalSearch" placeholder="Hľadaj menu…" oninput="filterModal()">
+    <div class="modal-list" id="modalList"></div>
+  </div>
+</div>
+
+<script>
+const CURRENCIES = [
+  {code:'EUR',name:'Euro',flag:'🇪🇺'},
+  {code:'USD',name:'Americký dolár',flag:'🇺🇸'},
+  {code:'CZK',name:'Česká koruna',flag:'🇨🇿'},
+  {code:'GBP',name:'Britská libra',flag:'🇬🇧'},
+  {code:'CHF',name:'Švajčiarsky frank',flag:'🇨🇭'},
+  {code:'PLN',name:'Poľský zlotý',flag:'🇵🇱'},
+  {code:'HUF',name:'Maďarský forint',flag:'🇭🇺'},
+  {code:'JPY',name:'Japonský jen',flag:'🇯🇵'},
+  {code:'CAD',name:'Kanadský dolár',flag:'🇨🇦'},
+  {code:'AUD',name:'Austrálsky dolár',flag:'🇦🇺'},
+  {code:'NOK',name:'Nórska koruna',flag:'🇳🇴'},
+  {code:'SEK',name:'Švédska koruna',flag:'🇸🇪'},
+  {code:'DKK',name:'Dánska koruna',flag:'🇩🇰'},
+  {code:'CNY',name:'Čínsky jüan',flag:'🇨🇳'},
+  {code:'BRL',name:'Brazílsky real',flag:'🇧🇷'},
+  {code:'MXN',name:'Mexické peso',flag:'🇲🇽'},
+  {code:'INR',name:'Indická rupia',flag:'🇮🇳'},
+  {code:'ZAR',name:'Juhoafrický rand',flag:'🇿🇦'},
+  {code:'TRY',name:'Turecká líra',flag:'🇹🇷'},
+  {code:'RUB',name:'Ruský rubeľ',flag:'🇷🇺'},
+  {code:'SGD',name:'Singapurský dolár',flag:'🇸🇬'},
+  {code:'NZD',name:'Novozélandský dolár',flag:'🇳🇿'},
+  {code:'HKD',name:'Hongkonský dolár',flag:'🇭🇰'},
+  {code:'ISK',name:'Islandská koruna',flag:'🇮🇸'},
+];
+
+const QUICK_CODES = ['USD','CZK','GBP','CHF','PLN','HUF'];
+const FALLBACK = {EUR:1,USD:1.085,CZK:25.2,GBP:0.855,CHF:0.972,PLN:4.26,HUF:392,JPY:162,CAD:1.48,AUD:1.65,NOK:11.5,SEK:11.2,DKK:7.46,CNY:7.87,BRL:6.1,MXN:19.5,INR:90,ZAR:20.1,TRY:35.2,RUB:98,SGD:1.47,NZD:1.79,HKD:8.49,ISK:152};
+
+let rates = {};
+let fromCur = 'EUR', toCur = 'USD';
+let modalTarget = 'from';
+
+function fmt(val, code) {
+  if (['JPY','HUF','RUB','ISK'].includes(code)) return val.toLocaleString('sk-SK', {maximumFractionDigits:0});
+  return val.toLocaleString('sk-SK', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function toEUR(amount, code) { return amount / (rates[code] || 1); }
+function fromEUR(eur, code) { return eur * (rates[code] || 1); }
+
+function convert() {
+  const amt = parseFloat(document.getElementById('amountIn').value);
+  if (isNaN(amt) || !Object.keys(rates).length) return;
+  const eur = toEUR(amt, fromCur);
+  const result = fromEUR(eur, toCur);
+  const rate = fromEUR(1 / (rates[fromCur]||1), toCur);
+  document.getElementById('resultEq').textContent = fmt(amt, fromCur) + ' ' + fromCur + ' =';
+  document.getElementById('resultAmount').textContent = fmt(result, toCur) + ' ' + toCur;
+  document.getElementById('resultRate').textContent = '1 ' + fromCur + ' = ' + fmt(rate, toCur) + ' ' + toCur;
+}
+
+function buildQuick() {
+  const grid = document.getElementById('quickGrid');
+  grid.innerHTML = '';
+  QUICK_CODES.forEach(code => {
+    if (!rates[code]) return;
+    const val = fromEUR(100, code);
+    const tile = document.createElement('div');
+    tile.className = 'quick-tile';
+    tile.innerHTML = `<span class="pair">${CURRENCIES.find(c=>c.code===code)?.flag || ''} EUR → ${code}</span><span class="val">${fmt(val, code)}</span>`;
+    tile.addEventListener('click', () => { fromCur='EUR'; toCur=code; updateButtons(); convert(); });
+    grid.appendChild(tile);
+  });
+}
+
+function updateButtons() {
+  const f = CURRENCIES.find(c=>c.code===fromCur);
+  const t = CURRENCIES.find(c=>c.code===toCur);
+  document.getElementById('fromFlag').textContent = f?.flag||'';
+  document.getElementById('fromCode').textContent = f?.code||'';
+  document.getElementById('fromName').textContent = f?.name||'';
+  document.getElementById('toFlag').textContent = t?.flag||'';
+  document.getElementById('toCode').textContent = t?.code||'';
+  document.getElementById('toName').textContent = t?.name||'';
+}
+
+async function fetchRates() {
+  try {
+    const r = await fetch('https://api.frankfurter.app/latest?base=EUR&symbols=' + CURRENCIES.map(c=>c.code).join(','));
+    const d = await r.json();
+    rates = d.rates || {};
+    rates['EUR'] = 1;
+    const dot = document.getElementById('statusDot');
+    dot.classList.remove('err');
+    const now = new Date().toLocaleTimeString('sk-SK', {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('statusMsg').textContent = 'Kurzy aktualizované ' + now;
+    convert(); buildQuick();
+  } catch(e) {
+    rates = {...FALLBACK};
+    const dot = document.getElementById('statusDot');
+    dot.classList.add('err');
+    document.getElementById('statusMsg').textContent = 'Offline – záložné kurzy';
+    convert(); buildQuick();
+  }
+}
+
+// Modal
+function openModal(target) {
+  modalTarget = target;
+  document.getElementById('modalTitle').textContent = target === 'from' ? 'Prepočítať z' : 'Prepočítať na';
+  document.getElementById('modalSearch').value = '';
+  filterModal();
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('modalSearch').focus(), 100);
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modalOverlay')) {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+}
+
+function filterModal() {
+  const q = document.getElementById('modalSearch').value.toLowerCase();
+  const list = document.getElementById('modalList');
+  const selected = modalTarget === 'from' ? fromCur : toCur;
+  list.innerHTML = '';
+  CURRENCIES.filter(c => !q || c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)).forEach(c => {
+    const item = document.createElement('div');
+    item.className = 'modal-item' + (c.code === selected ? ' selected' : '');
+    item.innerHTML = `<span class="mflag">${c.flag}</span><span class="mcode">${c.code}</span><span class="mname">${c.name}</span>`;
+    item.addEventListener('click', () => {
+      if (modalTarget === 'from') fromCur = c.code; else toCur = c.code;
+      updateButtons(); convert();
+      document.getElementById('modalOverlay').classList.remove('open');
+    });
+    list.appendChild(item);
+  });
+}
+
+document.getElementById('swapBtn').addEventListener('click', () => {
+  [fromCur, toCur] = [toCur, fromCur];
+  updateButtons(); convert();
+});
+
+document.getElementById('amountIn').addEventListener('input', convert);
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+
+fetchRates();
+updateButtons();
+</script>
+</body>
+</html>
