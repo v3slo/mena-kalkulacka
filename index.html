@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D9E75">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Meny">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Menová kalkulačka</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #1D9E75; --green-light: #E1F5EE; --green-dark: #085041;
+    --bg: #f5f5f3; --card: #ffffff; --text: #1a1a18; --muted: #6b6b67;
+    --border: rgba(0,0,0,0.1); --radius: 14px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#141412; --card:#1f1f1d; --text:#f0ede8; --muted:#9a9a94; --border:rgba(255,255,255,0.08); --green-light:#0a3326; }
+  }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100dvh; padding-bottom:calc(var(--safe-bot) + 20px); }
+  header { background:var(--green); color:#fff; padding:calc(var(--safe-top) + 18px) 20px 18px; display:flex; align-items:center; gap:12px; }
+  header .icon { font-size:26px; }
+  header h1 { font-size:20px; font-weight:600; }
+  header .sub { font-size:12px; opacity:0.8; margin-top:1px; }
+  .main { padding:16px; max-width:480px; margin:0 auto; }
+  .card { background:var(--card); border-radius:var(--radius); border:1px solid var(--border); padding:16px; margin-bottom:14px; }
+  .card-label { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; }
+  .row { display:flex; gap:10px; align-items:stretch; }
+  .amount-input { flex:1; font-size:28px; font-weight:500; color:var(--text); background:var(--bg); border:1.5px solid var(--border); border-radius:10px; padding:10px 14px; outline:none; min-width:0; -moz-appearance:textfield; }
+  .amount-input::-webkit-outer-spin-button, .amount-input::-webkit-inner-spin-button { -webkit-appearance:none; }
+  .amount-input:focus { border-color:var(--green); }
+  .cur-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg); border:1.5px solid var(--border); border-radius:10px; padding:8px 14px; cursor:pointer; min-width:90px; gap:2px; -webkit-tap-highlight-color:transparent; }
+  .cur-btn:active { background:var(--green-light); border-color:var(--green); }
+  .cur-btn .flag { font-size:22px; line-height:1; }
+  .cur-btn .code { font-size:15px; font-weight:600; color:var(--text); }
+  .cur-btn .name { font-size:10px; color:var(--muted); }
+  .result-value { flex:1; font-size:28px; font-weight:500; color:var(--green-dark); background:var(--green-light); border:1.5px solid rgba(29,158,117,.2); border-radius:10px; padding:10px 14px; display:flex; align-items:center; min-width:0; overflow:hidden; white-space:nowrap; }
+  @media (prefers-color-scheme:dark) { .result-value { color:#9FE1CB; } }
+  .swap-row { display:flex; justify-content:center; margin:-4px 0; position:relative; z-index:1; }
+  .swap-btn { background:var(--card); border:1.5px solid var(--border); border-radius:50%; width:42px; height:42px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; -webkit-tap-highlight-color:transparent; }
+  .swap-btn:active { background:var(--green-light); }
+  .rate-info { text-align:center; font-size:12px; color:var(--muted); margin-bottom:14px; }
+  .section-title { font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; }
+  .quick-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:14px; }
+  .quick-tile { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px 12px; cursor:pointer; -webkit-tap-highlight-color:transparent; display:flex; justify-content:space-between; align-items:center; }
+  .quick-tile:active { border-color:var(--green); background:var(--green-light); }
+  .quick-tile .pair { font-size:12px; color:var(--muted); }
+  .quick-tile .val { font-size:15px; font-weight:600; color:var(--text); }
+  .status-bar { text-align:center; font-size:11px; color:var(--muted); padding:4px 0 8px; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .dot { width:7px; height:7px; border-radius:50%; background:var(--green); display:inline-block; flex-shrink:0; }
+  .dot.err { background:#E24B4A; }
+  /* Modal */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100; align-items:flex-end; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal-sheet { background:var(--card); border-radius:20px 20px 0 0; padding:0 0 calc(var(--safe-bot) + 16px); width:100%; max-width:480px; max-height:80dvh; display:flex; flex-direction:column; }
+  .modal-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:12px auto 8px; }
+  .modal-header { padding:8px 16px 12px; font-size:16px; font-weight:600; }
+  .modal-search { margin:0 16px 10px; font-size:15px; padding:10px 14px; border:1.5px solid var(--border); border-radius:10px; background:var(--bg); color:var(--text); outline:none; width:calc(100% - 32px); }
+  .modal-search:focus { border-color:var(--green); }
+  .modal-list { overflow-y:auto; flex:1; }
+  .modal-item { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; -webkit-tap-highlight-color:transparent; border-bottom:1px solid var(--border); }
+  .modal-item:active { background:var(--green-light); }
+  .modal-item .mflag { font-size:24px; width:30px; text-align:center; }
+  .modal-item .mcode { font-size:15px; font-weight:600; flex:0 0 48px; }
+  .modal-item .mname { font-size:13px; color:var(--muted); }
+  .modal-item.selected .mcode { color:var(--green); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="icon">💱</div>
+  <div>
+    <h1>Menová kalkulačka</h1>
+    <div class="sub" id="headerSub">Načítavam kurzy…</div>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Vstup -->
+  <div class="card">
+    <div class="card-label">Suma</div>
+    <div class="row">
+      <input class="amount-input" type="number" id="amountIn" value="100" inputmode="decimal" min="0">
+      <button class="cur-btn" id="fromBtn">
+        <span class="flag" id="fromFlag">🇪🇺</span>
+        <span class="code" id="fromCode">EUR</span>
+        <span class="name" id="fromName">Euro</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="swap-row">
+    <button class="swap-btn" id="swapBtn">⇅</button>
+  </div>
+
+  <!-- Výsledok -->
+  <div class="card">
+    <div class="card-label">Výsledok</div>
+    <div class="row">
+      <div class="result-value" id="resultValue">—</div>
+      <button class="cur-btn" id="toBtn">
+        <span class="flag" id="toFlag">🇺🇸</span>
+        <span class="code" id="toCode">USD</span>
+        <span class="name" id="toName">Americký dolár</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="rate-info" id="rateInfo"></div>
+
+  <div class="section-title">Rýchle porovnanie (100 EUR)</div>
+  <div class="quick-grid" id="quickGrid"></div>
+
+  <div class="status-bar">
+    <span class="dot" id="statusDot"></span>
+    <span id="statusMsg">Načítavam…</span>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header" id="modalTitle">Vyber menu</div>
+    <input class="modal-search" id="modalSearch" placeholder="Hľadaj menu…">
+    <div class="modal-list" id="modalList"></div>
+  </div>
+</div>
+
+<script>
+const CURRENCIES = [
+  {code:'EUR',name:'Euro',flag:'🇪🇺'},
+  {code:'USD',name:'Americký dolár',flag:'🇺🇸'},
+  {code:'CZK',name:'Česká koruna',flag:'🇨🇿'},
+  {code:'GBP',name:'Britská libra',flag:'🇬🇧'},
+  {code:'CHF',name:'Švajčiarsky frank',flag:'🇨🇭'},
+  {code:'PLN',name:'Poľský zlotý',flag:'🇵🇱'},
+  {code:'HUF',name:'Maďarský forint',flag:'🇭🇺'},
+  {code:'JPY',name:'Japonský jen',flag:'🇯🇵'},
+  {code:'CAD',name:'Kanadský dolár',flag:'🇨🇦'},
+  {code:'AUD',name:'Austrálsky dolár',flag:'🇦🇺'},
+  {code:'NOK',name:'Nórska koruna',flag:'🇳🇴'},
+  {code:'SEK',name:'Švédska koruna',flag:'🇸🇪'},
+  {code:'DKK',name:'Dánska koruna',flag:'🇩🇰'},
+  {code:'CNY',name:'Čínsky jüan',flag:'🇨🇳'},
+  {code:'BRL',name:'Brazílsky real',flag:'🇧🇷'},
+  {code:'MXN',name:'Mexické peso',flag:'🇲🇽'},
+  {code:'INR',name:'Indická rupia',flag:'🇮🇳'},
+  {code:'ZAR',name:'Juhoafrický rand',flag:'🇿🇦'},
+  {code:'TRY',name:'Turecká líra',flag:'🇹🇷'},
+  {code:'RUB',name:'Ruský rubeľ',flag:'🇷🇺'},
+  {code:'SGD',name:'Singapurský dolár',flag:'🇸🇬'},
+  {code:'NZD',name:'Novozélandský dolár',flag:'🇳🇿'},
+  {code:'HKD',name:'Hongkonský dolár',flag:'🇭🇰'},
+];
+
+const QUICK = ['USD','CZK','GBP','CHF','PLN','HUF'];
+const FALLBACK = {EUR:1,USD:1.085,CZK:25.2,GBP:0.855,CHF:0.972,PLN:4.26,HUF:392,JPY:162,CAD:1.48,AUD:1.65,NOK:11.5,SEK:11.2,DKK:7.46,CNY:7.87,BRL:6.1,MXN:19.5,INR:90,ZAR:20.1,TRY:35.2,RUB:98,SGD:1.47,NZD:1.79,HKD:8.49};
+
+let rates = null; // null = not loaded yet
+let fromCur = 'EUR', toCur = 'USD';
+let modalTarget = 'from';
+
+function fmt(val, code) {
+  if (['JPY','HUF','RUB','ISK'].includes(code)) return val.toLocaleString('sk-SK', {maximumFractionDigits:0});
+  return val.toLocaleString('sk-SK', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function convert() {
+  const r = rates || FALLBACK;
+  const amt = parseFloat(document.getElementById('amountIn').value);
+  if (isNaN(amt)) { document.getElementById('resultValue').textContent = '—'; return; }
+  // convert: amt fromCur -> EUR -> toCur
+  const inEUR = amt / r[fromCur];
+  const result = inEUR * r[toCur];
+  document.getElementById('resultValue').textContent = fmt(result, toCur) + ' ' + toCur;
+  // rate line: 1 fromCur = X toCur
+  const rate = r[toCur] / r[fromCur];
+  document.getElementById('rateInfo').textContent = '1 ' + fromCur + ' = ' + fmt(rate, toCur) + ' ' + toCur;
+}
+
+function buildQuick() {
+  const r = rates || FALLBACK;
+  const grid = document.getElementById('quickGrid');
+  grid.innerHTML = '';
+  QUICK.forEach(code => {
+    const c = CURRENCIES.find(x => x.code === code);
+    if (!c || !r[code]) return;
+    const val = 100 * r[code] / r['EUR']; // 100 EUR -> code
+    const tile = document.createElement('div');
+    tile.className = 'quick-tile';
+    tile.innerHTML = '<span class="pair">' + c.flag + ' EUR → ' + code + '</span><span class="val">' + fmt(val, code) + '</span>';
+    tile.addEventListener('click', () => { fromCur='EUR'; toCur=code; updateButtons(); convert(); });
+    grid.appendChild(tile);
+  });
+}
+
+function updateButtons() {
+  const f = CURRENCIES.find(c => c.code === fromCur) || {};
+  const t = CURRENCIES.find(c => c.code === toCur) || {};
+  document.getElementById('fromFlag').textContent = f.flag || '';
+  document.getElementById('fromCode').textContent = f.code || '';
+  document.getElementById('fromName').textContent = f.name || '';
+  document.getElementById('toFlag').textContent = t.flag || '';
+  document.getElementById('toCode').textContent = t.code || '';
+  document.getElementById('toName').textContent = t.name || '';
+}
+
+async function fetchRates() {
+  const codes = CURRENCIES.map(c => c.code).join(',');
+  try {
+    const resp = await fetch('https://api.frankfurter.app/latest?base=EUR&symbols=' + codes);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (!data.rates) throw new Error('No rates');
+    rates = { ...data.rates, EUR: 1 };
+    const now = new Date().toLocaleTimeString('sk-SK', {hour:'2-digit', minute:'2-digit'});
+    document.getElementById('statusDot').classList.remove('err');
+    document.getElementById('statusMsg').textContent = 'Kurzy zo dňa ' + (data.date || '') + ', ' + now;
+    document.getElementById('headerSub').textContent = 'Aktuálne kurzy ECB';
+  } catch(e) {
+    rates = { ...FALLBACK };
+    document.getElementById('statusDot').classList.add('err');
+    document.getElementById('statusMsg').textContent = 'Offline – záložné kurzy';
+    document.getElementById('headerSub').textContent = 'Záložné kurzy (offline)';
+  }
+  convert();
+  buildQuick();
+}
+
+// Buttons
+document.getElementById('fromBtn').addEventListener('click', () => openModal('from'));
+document.getElementById('toBtn').addEventListener('click', () => openModal('to'));
+document.getElementById('swapBtn').addEventListener('click', () => {
+  [fromCur, toCur] = [toCur, fromCur];
+  updateButtons(); convert();
+});
+document.getElementById('amountIn').addEventListener('input', convert);
+
+// Modal
+function openModal(target) {
+  modalTarget = target;
+  document.getElementById('modalTitle').textContent = target === 'from' ? 'Prepočítať z' : 'Prepočítať na';
+  document.getElementById('modalSearch').value = '';
+  renderModal('');
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('modalSearch').focus(), 150);
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+document.getElementById('modalSearch').addEventListener('input', function() {
+  renderModal(this.value.toLowerCase());
+});
+
+function renderModal(q) {
+  const selected = modalTarget === 'from' ? fromCur : toCur;
+  const list = document.getElementById('modalList');
+  list.innerHTML = '';
+  CURRENCIES
+    .filter(c => !q || c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q))
+    .forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'modal-item' + (c.code === selected ? ' selected' : '');
+      div.innerHTML = '<span class="mflag">' + c.flag + '</span><span class="mcode">' + c.code + '</span><span class="mname">' + c.name + '</span>';
+      div.addEventListener('click', () => {
+        if (modalTarget === 'from') fromCur = c.code; else toCur = c.code;
+        updateButtons(); convert();
+        document.getElementById('modalOverlay').classList.remove('open');
+      });
+      list.appendChild(div);
+    });
+}
+
+// SW
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// Init — show fallback immediately, then fetch
+rates = { ...FALLBACK };
+updateButtons();
+convert();
+buildQuick();
+fetchRates();
+</script>
+</body>
+</html>
